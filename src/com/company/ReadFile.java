@@ -8,26 +8,16 @@ import java.util.regex.Pattern;
 
 public class ReadFile {
 
-    private String filePath;
-    private BufferedReader br;
-    private InputStream isr;
-    private StringBuffer sb;
-    private List<SDUNews> newsList;
+    public ReadFile(){
 
-    public ReadFile(String path){
-        this.filePath = path;
-        sb = new StringBuffer();
-        this.newsList = new ArrayList<>();
     }
 
     private SDUNews loadFile(File file) {
         SDUNews sduNews = new SDUNews();
         try {
-                String url = file.getAbsolutePath();
-                System.out.println(url);
-
-                isr = new FileInputStream(file);
-                br = new BufferedReader(new InputStreamReader(isr));
+                StringBuffer sb = new StringBuffer();
+                InputStream isr = new FileInputStream(file);
+                BufferedReader br = new BufferedReader(new InputStreamReader(isr));
 
                 String line = "";
                 line = br.readLine();
@@ -85,18 +75,8 @@ public class ReadFile {
         else return false;
     }
 
-    public List<SDUNews> getNewsList() {
-        List<SDUNews> newsList = new ArrayList<>();
-        File f = new File(filePath);
-        File[] files = f.listFiles();
-        for(File file : files)
-            newsList.add(loadFile(file));
-
-        return newsList;
-    }
-
-    public String getContent(){
-        return sb.toString();
+    public SDUNews getNewsList(File file) {
+        return loadFile(file);
     }
 
 }

@@ -9,6 +9,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import cn.edu.hfut.dmic.contentextractor.News;
+import com.sleepycat.persist.impl.SimpleFormat;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
@@ -34,12 +35,19 @@ import javax.print.Doc;
 
 public class Index {
     private String writeFile; //"D:\\study\\Information Retrieval\\resource"
+    private ReadFile rf;
+    File f;
+    File[] files;
 
-    public Index(String writeFile){
+    public Index(String readFile, String writeFile, ReadFile rf){
         this.writeFile = writeFile;
+        this.rf = rf;
+        f = new File(readFile);
+        files = f.listFiles();
     }
 
-    public void createIndex(List<SDUNews> newsList) throws IOException {
+    public void createIndex() throws IOException {
+        //read web content
 
         //initialize lucence index
         String pathFile = new File(writeFile).getAbsolutePath();
@@ -49,38 +57,40 @@ public class Index {
         indexWriterConfig.setOpenMode(OpenMode.CREATE);
         IndexWriter indexWriter = new IndexWriter(directory, indexWriterConfig);
 
-        for(int i = 0; i < newsList.size(); i++){
+        int sort = 0;
+        for(File file : files){
+            SDUNews sduNews = rf.getNewsList(file);
             Document doc = new Document();
-            newsList.get(i).sort = i;
+            sduNews.sort = sort++;
 
-            TextField titleField = new TextField("title", newsList.get(i).getTitle(), Store.YES);
+            TextField titleField = new TextField("title", sduNews.getTitle(), Store.YES);
             doc.add(titleField);
 
-            TextField timeField = new TextField("time", newsList.get(i).getTime(), Store.YES);
+            TextField timeField = new TextField("time", sduNews.getTime(), Store.YES);
             doc.add(timeField);
 
-            StringField urlField = new StringField("url", newsList.get(i).getUrl(), Store.YES);
+            StringField urlField = new StringField("url", sduNews.getUrl(), Store.YES);
             doc.add(urlField);
 
-            TextField contentField = new TextField("content", newsList.get(i).getContent(), Store.YES);
+            TextField contentField = new TextField("content", sduNews.getContent(), Store.YES);
             doc.add(contentField);
 
-            StringField authorField = new StringField("author", newsList.get(i).getAuthor(), Store.YES);
+            StringField authorField = new StringField("author", sduNews.getAuthor(), Store.YES);
             doc.add(authorField);
 
-            StringField editorField = new StringField("editor", newsList.get(i).getEditor(), Store.YES);
+            StringField editorField = new StringField("editor", sduNews.getEditor(), Store.YES);
             doc.add(editorField);
 
-            TextField sourceField = new TextField("source", newsList.get(i).getSource(), Store.YES);
+            TextField sourceField = new TextField("source", sduNews.getSource(), Store.YES);
             doc.add(sourceField);
 
-            TextField clickField = new TextField("click", Integer.toString(newsList.get(i).getClick()), Store.YES);
+            TextField clickField = new TextField("click", Integer.toString(sduNews.getClick()), Store.YES);
             doc.add(clickField);
 
-            StringField photoField = new StringField("photography", newsList.get(i).getPhotography(), Store.YES);
+            StringField photoField = new StringField("photography", sduNews.getPhotography(), Store.YES);
             doc.add(photoField);
 
-            TextField sortField = new TextField("sort", Integer.toString(newsList.get(i).sort),Store.YES);
+            TextField sortField = new TextField("sort", Integer.toString(sduNews.sort),Store.YES);
             doc.add(sortField);
 
             indexWriter.addDocument(doc);
@@ -90,7 +100,7 @@ public class Index {
         indexWriter.close();
     }
 
-    public List search(String keywords,List<SDUNews> nNewsList, int hitsPage) throws IOException, ParseException{
+    public List search(String keywords, int hitsPage) throws IOException, ParseException{
         String[] fields = {"title","time","url","content","author","editor","source","click","photography"};
         Analyzer analyzer = new StandardAnalyzer();
         String documentPath = new File(writeFile).getAbsolutePath();
@@ -110,10 +120,10 @@ public class Index {
         for(int i = 0; i < hits.length; i++){
             Document d = indexSearcher.doc(hits[i].doc);
             int pos = Integer.parseInt(d.get("sort"));
-            newsList.add(nNewsList.get(pos));
-            timeNewsList.add(nNewsList.get(pos));
-            clickNewsList.add(nNewsList.get(pos));
-            reNewsList.add(nNewsList.get(pos));
+            newsList.add(rf.getNewsList(files[pos]));
+            timeNewsList.add(rf.getNewsList(files[pos]));
+            clickNewsList.add(rf.getNewsList(files[pos]));
+            reNewsList.add(rf.getNewsList(files[pos]));
         }
 
 //        Collections.sort(timeNewsList, new SortByTime());
@@ -139,18 +149,74 @@ public class Index {
         public int compare(Object object1, Object object2){
             SDUNews n1 = (SDUNews) object1;
             SDUNews n2 = (SDUNews) object2;
-            return n1.getTime().compareTo(n2.getTime());
+//            return n1.getTime().compareTo(n2.getTime());
+            return compare(n1.getTime(), n2.getTime());
+        }
+        private int compare(String s1, String s2){
+            int[] time1 = extractTime(s1);
+            int[] time2 = extractTime(s2);
+            if(time1[0] > time2[0])
+                return 1;
+            else if(time1[0] < time2[0])
+                return -1;
+            else if(time1[1] > time2[1])
+                return 1;
+            else if(time1[1] < time2[1])
+                return -1;
+            else if(time1[2] > time2[2])
+                return 1;
+            else if(time1[2] < time2[2])
+                return -1;
+            else return 0;
+        }
+        private int[] extractTime(String s){
+            String[] ts = s.split("年");
+            int[] time = new int[3];
+            switch (ts.length){
+                case 2:
+                    return extractTimeByCharacter(ts);
+                case 1:
+                    return extractTimeBySymbol(ts);
+                default:
+                    break;
+            }
+            return time;
+        }
+        private int[] extractTimeByCharacter(String[] s){
+            int[] time = new int[3];
+            time[0] = Integer.parseInt(s[0]);
+            String[] mon = s[1].split("月");
+            time[1] = Integer.parseInt(mon[0]);
+            String day = mon[1].split("日")[0];
+            time[2] = Integer.parseInt(day);
+            return time;
+        }
+        private int[] extractTimeBySymbol(String[] s){
+            int[] time = new int[3];
+            String[] date = s[0].split("-");
+            String d = date[2].split(" ")[0];
+            if(date.length != 3) {
+                System.err.println("invalid date format");
+                return time;
+            }
+            time[0] = Integer.parseInt(date[0]);
+            time[1] = Integer.parseInt(date[1]);
+            time[2] = Integer.parseInt(d);
+            return time;
         }
     }
     public class SortByClick implements Comparator{
         public int compare(Object object1, Object object2){
             SDUNews n1 = (SDUNews) object1;
             SDUNews n2 = (SDUNews) object2;
-            if(n1.getClick() < n2.getClick())
+            return compare(n1.getClick(), n2.getClick());
+        }
+        private int compare(int c1, int c2){
+            if(c1 < c2)
                 return -1;
-            else if(n1.getClick() == n2.getClick())
-                return 0;
-            else return 1;
+            else if(c1 > c2)
+                return 1;
+            else return 0;
         }
     }
     public class SortByRelece implements Comparator{
@@ -158,11 +224,14 @@ public class Index {
         public int compare(Object o1, Object o2) {
             SDUNews n1 = (SDUNews) o1;
             SDUNews n2 = (SDUNews) o2;
-            if(n1.sort < n2.sort)
+            return compare(n1.sort, n2.sort);
+        }
+        private int compare(int s1, int s2){
+            if(s1 < s2)
                 return -1;
-            else if(n1.sort == n2.sort)
-                return 0;
-            else return 1;
+            else if(s1 > s2)
+                return 1;
+            else return 0;
         }
     }
 }

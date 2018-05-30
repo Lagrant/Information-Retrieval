@@ -1,10 +1,7 @@
 .idea/
 out/
 *.iml
-<<<<<<< HEAD
 *.class
+
 web/img
-web/META-INF
-=======
-*.class
->>>>>>> 14e3451a7926175fb4360c9ef2e8ca173f7d95bd
+web/META-IN

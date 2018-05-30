@@ -2,3 +2,6 @@
 out/
 *.iml
 *.class
+
+web/img
+web/META-INF

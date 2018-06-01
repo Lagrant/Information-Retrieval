@@ -95,7 +95,7 @@ public class Index {
         indexWriter.close();
     }
 
-    public List<SDUNews> search(String keywords, int hitsPage) throws IOException, ParseException{
+    public List<SDUNews> search(String keywords, int currentPage, int itemsPerPage) throws IOException, ParseException{
         String[] fields = {"title","time","url","content","author","editor","source","click","photography"};
         Analyzer analyzer = new StandardAnalyzer();
         String documentPath = new File(writeFile).getAbsolutePath();
@@ -104,10 +104,17 @@ public class Index {
         IndexSearcher indexSearcher = new IndexSearcher(indexReader);
 
         MultiFieldQueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+        parser.setAllowLeadingWildcard(true);
         Query q = parser.parse(keywords);
-        TopScoreDocCollector tsdc = TopScoreDocCollector.create(hitsPage);
-        indexSearcher.search(q, tsdc);
-        ScoreDoc[] hits = tsdc.topDocs().scoreDocs;
+
+        int start = currentPage*itemsPerPage;
+//        TopScoreDocCollector tsdc = TopScoreDocCollector.create(hitsPage);
+        TopDocs td = indexSearcher.search(q, start);
+        ScoreDoc lastScore = td.scoreDocs[start - 1];
+
+        td = indexSearcher.searchAfter(lastScore, q, itemsPerPage);
+        ScoreDoc[] hits = td.scoreDocs;
+
         List<SDUNews> newsList = new ArrayList<>();
         List<SDUNews> timeNewsList = new ArrayList<>();
         List<SDUNews> clickNewsList = new ArrayList<>();

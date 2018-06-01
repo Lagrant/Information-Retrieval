@@ -76,6 +76,7 @@
             </div>
         </div><!-- End of main -->
     </div><!--End of bd-->
+	<%@ include file="pages.jsp" %>
 </div>
 
 <div id="foot"></div>

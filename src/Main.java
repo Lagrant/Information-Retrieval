@@ -18,9 +18,8 @@ public class Main extends HttpServlet {
     private Connection cn = null;
     private static String path = "D:\\study\\Information Retrieval\\sdu_html_extract_2";
     private static String writeToPath = "D:\\study\\Information Retrieval\\resource";
-    //test
-//    private static String path = "D:\\study\\Information Retrieval\\new_L2";
-//    private static String writeToPath = "D:\\study\\Information Retrieval\\new_L2_resource";
+
+
 
     public void init(ServletConfig servletConfig) throws ServletException {
         super.init(servletConfig);
@@ -28,22 +27,39 @@ public class Main extends HttpServlet {
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try{
+            int itemsPerPage = 10;
+            int curPage;
+            int maxPages = 100;
+            String query;
             Index index = new Index(path, writeToPath, new ReadFile());
-            String query = request.getParameter("inputMessage");
+            query = request.getParameter("inputMessage");
+            request.setAttribute("inputMessage", query);
             if(query == null ||query.trim().length() == 0)
                 response.sendRedirect("index.jsp");
             else {
+
+                if(request.getParameter("currentPage") == null)
+                    curPage = 1;
+                else curPage = Integer.parseInt(request.getParameter("currentPage"));
+
+                request.setAttribute("maxPages", maxPages);
+                request.setAttribute("currentPage", curPage);
+                request.setAttribute("itemsPerPage", itemsPerPage);
                 Date begin = new Date();
-                List<SDUNews> results = index.search(query, 500);
+                List<SDUNews> results = index.search(query, Integer.parseInt(request.getAttribute("currentPage").toString()), Integer.parseInt(request.getAttribute("itemsPerPage").toString()));
                 SDUNews[] arrayResults = list2Array(results);
+                request.setAttribute("maxItem", arrayResults.length);
+
 
                 if(results.size() == 0){
                     request.setAttribute("noResult","没有找到相关内容");
                     RequestDispatcher rd = request.getRequestDispatcher("noresult.jsp");
                     rd.forward(request, response);
                 } else {
+
                     int hitsPage = results.size();
-                    request.setAttribute("news total", hitsPage);
+//                    request.setAttribute("news total", arrayResults.length);
+                    request.setAttribute("news total", 1000);
                     for(int i = 0; i < hitsPage; i++){
                         request.setAttribute("news title"+i, arrayResults[i].getTitle());
                         request.setAttribute("news url"+i, arrayResults[i].getUrl());
@@ -91,27 +107,26 @@ public class Main extends HttpServlet {
 
     public static void main(String[] args) {
         // write your code here
-        String keywords;
-//        keywords = scan.nextLine();
-        keywords = "山东大学";
-
-
-        List<SDUNews> resultList= new ArrayList<>();
-
-
-        Index index = new Index(path, writeToPath, new ReadFile());
-//        try{
-//            index.createIndex();
+//        String keywords;
+////        keywords = scan.nextLine();
+//        keywords = "山东大学";
+//
+//        List<SDUNews> resultList= new ArrayList<>();
+//
+//
+//        Index index = new Index(path, writeToPath, new ReadFile());
+////        try{
+////            index.createIndex();
+////        }catch (Exception e){
+////            e.printStackTrace();
+////        }
+//        try {
+//            resultList = index.search(keywords);
 //        }catch (Exception e){
 //            e.printStackTrace();
 //        }
-        try {
-            resultList = index.search(keywords,500);
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        for(int i = 0; i < resultList.size(); i++){
-            System.out.println((i+1)+". "+resultList.get(i).getTitle()+"\t"+resultList.get(i).getTime()+"\t"+resultList.get(i).getClick());
-        }
+//        for(int i = 0; i < resultList.size(); i++){
+//            System.out.println((i+1)+". "+resultList.get(i).getTitle()+"\t"+resultList.get(i).getTime()+"\t"+resultList.get(i).getClick());
+//        }
     }
 }
